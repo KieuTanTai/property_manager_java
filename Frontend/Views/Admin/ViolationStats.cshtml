@@ -1,0 +1,14 @@
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Violation statistics";
+}
+
+<section class="max-w-6xl mx-auto"
+         style="--fg:#0f172a; --muted:#64748b; --card:#fff; --border:#e2e8f0; --primary:#2563eb; --accent:#f97316">
+    @await Html.PartialAsync("~/Views/Statistics/_ViolationStats.cshtml")
+</section>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script>window.initCharts_violation();</script>
+}
