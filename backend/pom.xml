@@ -9,13 +9,15 @@
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
 
+    <packaging>pom</packaging>
     <modules>
         <module>shared</module>
         <module>identity</module>
         <module>premise</module>
-        <module>activity</module>
         <module>contract</module>
+        <module>activity</module>
     </modules>
+
     <groupId>com.example</groupId>
     <artifactId>backend</artifactId>
     <version>0.0.1-SNAPSHOT</version>
@@ -88,6 +90,14 @@
             <groupId>org.springframework.modulith</groupId>
             <artifactId>spring-modulith-starter-test</artifactId>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-autoconfigure</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-autoconfigure</artifactId>
         </dependency>
     </dependencies>
     <dependencyManagement>
