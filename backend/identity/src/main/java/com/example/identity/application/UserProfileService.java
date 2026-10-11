@@ -1,28 +1,113 @@
 package com.example.identity.application;
 
+import java.util.List;
 import java.util.UUID;
+import java.util.regex.Pattern;
+import java.util.stream.StreamSupport;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.example.identity.interfaces.iapplication.IUserProfileApplication;
 import com.example.identity.interfaces.irepository.UserProfileRepository;
 import com.example.identity.models.profile.UserProfileModel;
+import com.example.identity.presentation.mapper.IdentityResponseMapper;
+import com.example.identity.presentation.response.ProfileResponse;
 
 @Service
 public class UserProfileService implements IUserProfileApplication {
+    private static final Pattern PHONE = Pattern.compile("^(03|05|07|08|09)\\d{8}$");
     private final UserProfileRepository profiles;
+    private final IdentityResponseMapper mapper;
 
-    public UserProfileService(UserProfileRepository profiles) {
+    public UserProfileService(UserProfileRepository profiles, IdentityResponseMapper mapper) {
         this.profiles = profiles;
+        this.mapper = mapper;
     }
 
-    public UserProfileModel getByIdentityCode(String identityCode) {
-        return profiles.findById(identityCode).orElseThrow(() -> new IllegalArgumentException("Profile not found."));
+    @Transactional(readOnly = true)
+    public ProfileResponse getByIdentityCode(String identityCode) {
+        return mapper.profile(profiles.findById(identityCode)
+                .orElseThrow(() -> new IllegalArgumentException("Profile was not found.")));
     }
 
-    public UserProfileModel getByAccountId(UUID accountId) {
-        return profiles.findByAccountId(accountId).orElseThrow(() -> new IllegalArgumentException("Profile not found."));
+    @Transactional(readOnly = true)
+    public ProfileResponse getByAccountId(UUID accountId) {
+        return mapper.profile(profiles.findByAccountId(accountId)
+                .orElseThrow(() -> new IllegalArgumentException("Profile was not found.")));
     }
 
-    public UserProfileModel save(UserProfileModel profile) { return profiles.save(profile); }
+    @Transactional
+    public ProfileResponse update(UserProfileModel profile) {
+        validate(profile);
+        if (profile.getUserProfilePhoneNumber() != null) {
+            profile.setUserProfilePhoneNumber(normalizePhone(profile.getUserProfilePhoneNumber()));
+        }
+        return mapper.profile(profiles.save(profile));
+    }
+
+    @Transactional
+    public ProfileResponse create(String identityCode, UUID accountId) {
+        validateIdentityCode(identityCode);
+        if (accountId == null) {
+            throw new IllegalArgumentException("Account id is required.");
+        }
+        return mapper.profile(profiles.save(UserProfileModel.builder()
+                .userProfileId(identityCode)
+                .userProfileAccountId(accountId)
+                .build()));
+    }
+
+    @Transactional
+    public int importProfiles(Iterable<UserProfileModel> values) {
+        var profilesToImport = toList(values);
+        if (profilesToImport.isEmpty()) {
+            throw new IllegalArgumentException("User profiles collection cannot be empty.");
+        }
+        profiles.saveAll(profilesToImport);
+        return profilesToImport.size();
+    }
+
+    @Transactional
+    public int updateAll(Iterable<UserProfileModel> values) {
+        var profilesToUpdate = toList(values);
+        if (profilesToUpdate.isEmpty()) {
+            throw new IllegalArgumentException("User profiles collection cannot be empty.");
+        }
+        profiles.updateAll(profilesToUpdate);
+        return profilesToUpdate.size();
+    }
+
+    private void validate(UserProfileModel profile) {
+        if (profile == null) {
+            throw new IllegalArgumentException("Profile is required.");
+        }
+        validateIdentityCode(profile.getUserProfileId());
+    }
+
+    private void validateIdentityCode(String identityCode) {
+        if (identityCode == null || identityCode.isBlank() || identityCode.length() != 12) {
+            throw new IllegalArgumentException("Identity code is required and must be 12 characters.");
+        }
+    }
+
+    private String normalizePhone(String phone) {
+        String cleaned = phone.replaceAll("[^\\d+]", "");
+        if (cleaned.startsWith("+84")) {
+            cleaned = "0" + cleaned.substring(3);
+        } else if (cleaned.startsWith("84") && cleaned.length() == 11) {
+            cleaned = "0" + cleaned.substring(2);
+        }
+        if (!PHONE.matcher(cleaned).matches()) {
+            throw new IllegalArgumentException("Invalid phone number format.");
+        }
+        return cleaned;
+    }
+
+    private <T> List<T> toList(Iterable<T> values) {
+        if (values == null) {
+            throw new IllegalArgumentException("Collection is required.");
+        }
+        return StreamSupport.stream(values.spliterator(), false).toList();
+    }
 }

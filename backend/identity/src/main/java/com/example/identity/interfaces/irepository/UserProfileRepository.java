@@ -8,6 +8,8 @@ import java.util.UUID;
 
 public interface UserProfileRepository {
     UserProfileModel save(UserProfileModel profile);
+    void saveAll(Iterable<UserProfileModel> profiles);
     Optional<UserProfileModel> findById(String identityCode);
     Optional<UserProfileModel> findByAccountId(UUID accountId);
+    void updateAll(Iterable<UserProfileModel> profiles);
 }

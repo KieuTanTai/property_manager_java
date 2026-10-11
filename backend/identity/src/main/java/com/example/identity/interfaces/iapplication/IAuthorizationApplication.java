@@ -4,10 +4,30 @@ import java.util.List;
 
 import com.example.identity.models.permission.PermissionModel;
 import com.example.identity.models.role.RoleModel;
+import com.example.identity.utils.Enum.ESystemRoleCode;
+import com.example.identity.utils.Enum.ESystemPermissionCode;
+import java.util.UUID;
+import com.example.identity.presentation.response.PermissionResponse;
+import com.example.identity.presentation.response.RoleResponse;
+import com.example.identity.presentation.response.RoleWithPermissionsResponse;
 
 public interface IAuthorizationApplication {
-    List<RoleModel> getRoles();
-    List<PermissionModel> getPermissions();
-    RoleModel saveRole(RoleModel role);
-    PermissionModel savePermission(PermissionModel permission);
+    RoleResponse getBaseRole();
+    RoleWithPermissionsResponse getRoleWithPermissions(ESystemRoleCode code);
+    RoleResponse getRoleByCode(String code);
+    List<RoleResponse> getRoles();
+    PermissionResponse getPermissionByCode(ESystemPermissionCode code);
+    PermissionResponse getPermissionByCode(String code);
+    List<PermissionResponse> getPermissions();
+    int addRole(RoleModel role, List<UUID> permissionIds);
+    int addAccountRoles(UUID accountId, List<UUID> roleIds);
+    int updateRole(RoleModel role);
+    int updateRole(RoleModel role, List<UUID> permissionIds);
+    int updateAccountRoles(UUID accountId, List<UUID> roleIds);
+    int addPermission(PermissionModel permission);
+    int addAccountPermissions(UUID accountId, List<UUID> permissionIds);
+    int updatePermission(PermissionModel permission);
+    int updateAccountPermissions(UUID accountId, List<UUID> permissionIds);
+    RoleResponse saveRole(RoleModel role);
+    PermissionResponse savePermission(PermissionModel permission);
 }

@@ -1,8 +1,11 @@
 package com.example.identity.interfaces;
 
+import org.yaml.snakeyaml.util.Tuple;
+
 public interface IAccountHelper {
-    boolean isEmailValid(String email);
-    boolean isPasswordValid(String password);
+    Tuple<Boolean, String> validateEmailAndPassword(String email, String password);
+    Boolean isEmailValid(String email);
+    Boolean isPasswordValid(String password);
     String hashPassword(String password);
-    boolean verifyPassword(String password, String hash);
+    Boolean verifyPassword(String password, String hash);
 }
