@@ -1,8 +1,18 @@
 package com.example.identity.models.account;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
+import com.example.identity.models.permission.PermissionModel;
+import com.example.identity.models.profile.UserProfileModel;
+import com.example.identity.models.role.RoleModel;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.ManyToMany;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -39,5 +49,22 @@ public class AccountModel {
     private LocalDateTime accountUpdatedAt;
 
     @Column(name = "account_is_active", nullable = false)
-    private Boolean  accountIsActive;
+    private Boolean accountIsActive;
+
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(name = "account_role",
+            joinColumns = @JoinColumn(name = "account_id"),
+            inverseJoinColumns = @JoinColumn(name = "role_id"))
+    @Builder.Default
+    private List<RoleModel> roles = new ArrayList<>();
+
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(name = "account_additional_permission",
+            joinColumns = @JoinColumn(name = "account_id"),
+            inverseJoinColumns = @JoinColumn(name = "permission_id"))
+    @Builder.Default
+    private List<PermissionModel> additionalPermissions = new ArrayList<>();
+
+    @OneToOne(mappedBy = "account")
+    private UserProfileModel userProfile;
 }

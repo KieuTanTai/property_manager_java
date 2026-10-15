@@ -5,6 +5,7 @@ import java.util.UUID;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.example.identity.models.account.AccountAdditionalPermissionModel;
 import com.example.identity.models.account.AccountModel;
 import com.example.identity.models.account.AccountRoleModel;
@@ -24,7 +25,8 @@ public final class AccountRequests {
     }
 
     public record Import(List<AccountModel> accounts, List<AccountRoleModel> accountRoles,
-            List<UserProfileModel> profiles, List<AccountAdditionalPermissionModel> additionalPermissions) {
+            @JsonAlias("profiles") List<UserProfileModel> userProfiles,
+            @JsonAlias("additionalPermissions") List<AccountAdditionalPermissionModel> accountAdditionalPermissions) {
     }
 
     public record UpdateRange(List<AccountModel> accounts) {

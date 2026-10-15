@@ -15,8 +15,8 @@ public class RoleRepositoryImpl implements RoleRepository {
     private final RoleJpaRepository delegate;
     public RoleRepositoryImpl(RoleJpaRepository delegate) { this.delegate = delegate; }
     public RoleModel save(RoleModel role) { return delegate.save(role); }
-    public List<RoleModel> findAll() { return delegate.findAll(); }
+    public List<RoleModel> findAll() { return delegate.findAllWithPermissions(); }
     public Optional<RoleModel> findByRoleName(String name) { return delegate.findByRoleName(name); }
     public Optional<RoleModel> findById(UUID id) { return delegate.findById(id); }
-    public Optional<RoleModel> findByCode(String code) { return delegate.findByRoleCode(code); }
+    public Optional<RoleModel> findByCode(String code) { return delegate.findByRoleCodeWithPermissions(code); }
 }

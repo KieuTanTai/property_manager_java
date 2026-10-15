@@ -25,6 +25,7 @@
         <url/>
     </scm>
     <properties>
+        <spring-boot.run.skip>true</spring-boot.run.skip>
         <spring-boot.repackage.skip>true</spring-boot.repackage.skip>
     </properties>
     <dependencies>

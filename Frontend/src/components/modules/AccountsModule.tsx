@@ -4,8 +4,8 @@ import { identityApi } from "@/api/identity.ts"
 import type { AccountModel, PermissionModel, RoleModel } from "@/api/identity.ts"
 import { FormField, Modal, inputCls, selectCls } from "./shared"
 import { accountName, dateLabel } from "../../scripts/identity"
+import { APP_SETTINGS } from "@/config/appSettings"
 
-const PAGE_SIZE = 10
 const buttonCls = "rounded-lg px-3 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50"
 
 export function AccountsModule() {
@@ -35,7 +35,7 @@ export function AccountsModule() {
     setError(null)
     try {
       const [page, roleList, permissionList] = await Promise.all([
-        identityApi.accounts(cursorStack[pageIndex] ?? null, PAGE_SIZE, status),
+        identityApi.accounts(cursorStack[pageIndex] ?? null, APP_SETTINGS.pagination.defaultPageSize, status),
         identityApi.roles(),
         identityApi.permissions(),
       ])

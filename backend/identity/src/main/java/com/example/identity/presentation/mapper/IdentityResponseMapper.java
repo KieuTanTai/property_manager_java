@@ -12,18 +12,15 @@ import com.example.identity.presentation.response.ProfileResponse;
 import com.example.identity.presentation.response.RoleResponse;
 import com.example.identity.presentation.response.RoleWithPermissionsResponse;
 
-import java.util.List;
-
 @Component
 public class IdentityResponseMapper {
-    public AccountResponse account(AccountModel account, List<String> roleCodes,
-            List<String> permissionCodes) {
+    public AccountResponse account(AccountModel account) {
         return new AccountResponse(
                 account.getAccountId(),
                 account.getAccountEmail(),
                 Boolean.TRUE.equals(account.getAccountIsActive()),
-                roleCodes,
-                permissionCodes,
+                account.getRoles().stream().map(RoleModel::getRoleCode).toList(),
+                account.getAdditionalPermissions().stream().map(PermissionModel::getPermissionCode).toList(),
                 account.getAccountCreatedAt(),
                 account.getAccountUpdatedAt());
     }
@@ -55,15 +52,16 @@ public class IdentityResponseMapper {
                 role.getRoleUpdatedAt());
     }
 
-    public RoleWithPermissionsResponse roleWithPermissions(RoleModel role,
-            List<PermissionResponse> permissions) {
+    public RoleWithPermissionsResponse roleWithPermissions(RoleModel role) {
         return new RoleWithPermissionsResponse(
                 role.getRoleId(),
                 role.getRoleCode(),
                 role.getRoleName(),
                 role.getRoleDescription(),
                 Boolean.TRUE.equals(role.getRoleIsActive()),
-                permissions);
+                role.getPermissions().stream().map(this::permission).toList(),
+                role.getRoleCreatedAt(),
+                role.getRoleUpdatedAt());
     }
 
     public PermissionResponse permission(PermissionModel permission) {

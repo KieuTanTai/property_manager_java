@@ -13,6 +13,7 @@ import com.example.identity.interfaces.irepository.UserProfileRepository;
 import com.example.identity.models.profile.UserProfileModel;
 import com.example.identity.presentation.mapper.IdentityResponseMapper;
 import com.example.identity.presentation.response.ProfileResponse;
+import com.example.shared.enums.ESystemUserGender;
 
 @Service
 public class UserProfileService implements IUserProfileApplication {
@@ -40,7 +41,10 @@ public class UserProfileService implements IUserProfileApplication {
     @Transactional
     public ProfileResponse update(UserProfileModel profile) {
         validate(profile);
-        if (profile.getUserProfilePhoneNumber() != null) {
+        if (profiles.findById(profile.getUserProfileId()).isEmpty()) {
+            throw new IllegalArgumentException("Profile was not found.");
+        }
+        if (profile.getUserProfilePhoneNumber() != null && !profile.getUserProfilePhoneNumber().isBlank()) {
             profile.setUserProfilePhoneNumber(normalizePhone(profile.getUserProfilePhoneNumber()));
         }
         return mapper.profile(profiles.save(profile));
@@ -52,9 +56,13 @@ public class UserProfileService implements IUserProfileApplication {
         if (accountId == null) {
             throw new IllegalArgumentException("Account id is required.");
         }
+        if (profiles.findById(identityCode).isPresent() || profiles.findByAccountId(accountId).isPresent()) {
+            throw new IllegalArgumentException("Profile already exists for the identity code or account.");
+        }
         return mapper.profile(profiles.save(UserProfileModel.builder()
                 .userProfileId(identityCode)
                 .userProfileAccountId(accountId)
+                .userProfileGender(ESystemUserGender.Unspecified)
                 .build()));
     }
 
@@ -64,6 +72,7 @@ public class UserProfileService implements IUserProfileApplication {
         if (profilesToImport.isEmpty()) {
             throw new IllegalArgumentException("User profiles collection cannot be empty.");
         }
+        profilesToImport.forEach(profile -> validate(profile, true));
         profiles.saveAll(profilesToImport);
         return profilesToImport.size();
     }
@@ -74,15 +83,34 @@ public class UserProfileService implements IUserProfileApplication {
         if (profilesToUpdate.isEmpty()) {
             throw new IllegalArgumentException("User profiles collection cannot be empty.");
         }
+        profilesToUpdate.forEach(profile -> validate(profile, true));
         profiles.updateAll(profilesToUpdate);
         return profilesToUpdate.size();
     }
 
     private void validate(UserProfileModel profile) {
+        validate(profile, true);
+    }
+
+    private void validate(UserProfileModel profile, boolean requireAccountId) {
         if (profile == null) {
             throw new IllegalArgumentException("Profile is required.");
         }
         validateIdentityCode(profile.getUserProfileId());
+        if (requireAccountId && profile.getUserProfileAccountId() == null) {
+            throw new IllegalArgumentException("Account id is required.");
+        }
+        if (lengthExceeds(profile.getUserProfileFirstName(), 30)
+                || lengthExceeds(profile.getUserProfileLastName(), 30)
+                || lengthExceeds(profile.getUserProfilePhoneNumber(), 10)
+                || lengthExceeds(profile.getUserProfileAddress(), 255)
+                || lengthExceeds(profile.getUserProfileAvatarUrl(), 255)) {
+            throw new IllegalArgumentException("One or more profile fields exceed their maximum length.");
+        }
+    }
+
+    private boolean lengthExceeds(String value, int maximumLength) {
+        return value != null && value.length() > maximumLength;
     }
 
     private void validateIdentityCode(String identityCode) {

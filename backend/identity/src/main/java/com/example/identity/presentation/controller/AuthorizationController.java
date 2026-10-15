@@ -1,6 +1,7 @@
 package com.example.identity.presentation.controller;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 
 import jakarta.validation.Valid;
@@ -10,7 +11,7 @@ import com.example.identity.interfaces.iapplication.IAuthorizationApplication;
 import com.example.identity.models.permission.PermissionModel;
 import com.example.identity.models.role.RoleModel;
 import com.example.identity.presentation.response.PermissionResponse;
-import com.example.identity.presentation.response.RoleResponse;
+import com.example.identity.presentation.response.RoleWithPermissionsResponse;
 import com.example.identity.presentation.record.AuthorizationRequests.*;
 
 @RestController
@@ -23,13 +24,18 @@ public class AuthorizationController {
     }
 
     @GetMapping("/roles")
-    public List<RoleResponse> getRoles() {
+    public List<RoleWithPermissionsResponse> getRoles() {
         return application.getRoles();
     }
 
     @GetMapping("/roles/{roleCode}")
-    public RoleResponse getRole(@PathVariable String roleCode) {
-        return application.getRoleByCode(roleCode);
+    public RoleWithPermissionsResponse getRole(@PathVariable String roleCode) {
+        return application.getRoleWithPermissions(roleCode);
+    }
+
+    @GetMapping("/roles/{roleCode}/permissions")
+    public RoleWithPermissionsResponse getRoleWithPermissions(@PathVariable String roleCode) {
+        return application.getRoleWithPermissions(roleCode);
     }
 
     @GetMapping("/permissions")
@@ -43,12 +49,12 @@ public class AuthorizationController {
     }
 
     @PostMapping("/roles")
-    public RoleResponse addRole(@Valid @RequestBody RoleChangeRequest request) {
-        return application.saveRole(toRole(request));
+    public int addRole(@Valid @RequestBody RoleChangeRequest request) {
+        return application.addRole(toRole(null, request), request.permissionIds());
     }
 
     @PostMapping("/accounts/{accountId}/roles")
-    public int addAccountRoles(@PathVariable UUID accountId, @RequestBody IdListRequest request) {
+    public int addAccountRoles(@PathVariable UUID accountId, @Valid @RequestBody IdListRequest request) {
         return application.addAccountRoles(accountId, request.ids());
     }
 
@@ -58,17 +64,17 @@ public class AuthorizationController {
     }
 
     @PutMapping("/accounts/{accountId}/roles")
-    public int updateAccountRoles(@PathVariable UUID accountId, @RequestBody IdListRequest request) {
+    public int updateAccountRoles(@PathVariable UUID accountId, @Valid @RequestBody IdListRequest request) {
         return application.updateAccountRoles(accountId, request.ids());
     }
 
     @PostMapping("/permissions")
-    public PermissionResponse addPermission(@Valid @RequestBody PermissionChangeRequest request) {
-        return application.savePermission(toPermission(request));
+    public int addPermission(@Valid @RequestBody PermissionChangeRequest request) {
+        return application.addPermission(toPermission(null, request));
     }
 
     @PostMapping("/accounts/{accountId}/permissions")
-    public int addAccountPermissions(@PathVariable UUID accountId, @RequestBody IdListRequest request) {
+    public int addAccountPermissions(@PathVariable UUID accountId, @Valid @RequestBody IdListRequest request) {
         return application.addAccountPermissions(accountId, request.ids());
     }
 
@@ -78,27 +84,36 @@ public class AuthorizationController {
     }
 
     @PutMapping("/accounts/{accountId}/permissions")
-    public int updateAccountPermissions(@PathVariable UUID accountId, @RequestBody IdListRequest request) {
+    public int updateAccountPermissions(@PathVariable UUID accountId,
+            @Valid @RequestBody IdListRequest request) {
         return application.updateAccountPermissions(accountId, request.ids());
     }
 
-    private RoleModel toRole(RoleChangeRequest request) {
-        return toRole(null, request);
-    }
-
     private RoleModel toRole(UUID id, RoleChangeRequest request) {
-        return RoleModel.builder().roleId(id).roleCode(request.code().trim().toLowerCase())
+        return RoleModel.builder().roleId(id).roleCode(normalizeCode(request.code(), request.name(), "role", id))
                 .roleName(request.name()).roleDescription(request.description())
                 .roleIsActive(request.active()).build();
     }
 
-    private PermissionModel toPermission(PermissionChangeRequest request) {
-        return toPermission(null, request);
-    }
-
     private PermissionModel toPermission(UUID id, PermissionChangeRequest request) {
-        return PermissionModel.builder().permissionId(id).permissionCode(request.code().trim().toLowerCase())
+        return PermissionModel.builder().permissionId(id)
+                .permissionCode(normalizeCode(request.code(), request.name(), "permission", id))
                 .permissionName(request.name()).permissionDescription(request.description())
                 .permissionIsActive(request.active()).build();
+    }
+
+    private String normalizeCode(String code, String name, String prefix, UUID id) {
+        if (code != null && !code.isBlank()) {
+            return code.trim().toLowerCase(Locale.ROOT);
+        }
+        if (id != null) {
+            return null;
+        }
+        String generated = name.trim().toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]+", "_")
+                .replaceAll("^_+|_+$", "");
+        if (generated.isBlank()) {
+            generated = prefix + "_" + UUID.randomUUID().toString().replace("-", "");
+        }
+        return generated.substring(0, Math.min(50, generated.length()));
     }
 }

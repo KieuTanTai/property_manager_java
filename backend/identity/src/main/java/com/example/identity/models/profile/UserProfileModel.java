@@ -5,7 +5,11 @@ import java.util.Date;
 import java.util.UUID;
 
 
+import com.example.identity.models.account.AccountModel;
 import com.example.shared.enums.ESystemUserGender;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -35,6 +39,11 @@ public class UserProfileModel {
     @Column(name = "user_profile_account_id", nullable=false)
     private UUID userProfileAccountId;
 
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_profile_account_id", referencedColumnName = "account_id",
+            insertable = false, updatable = false)
+    private AccountModel account;
+
     @Column(name = "user_profile_first_name", length=30)
     private String userProfileFirstName;
 
@@ -51,7 +60,7 @@ public class UserProfileModel {
     @Column(name = "user_profile_phone_number", length=10)
     private String userProfilePhoneNumber;
 
-    @Column(name = "user_profile_address", nullable=false, length=255)
+    @Column(name = "user_profile_address", length=255)
     private String userProfileAddress;
 
     @Column(name = "user_profile_avatar_url", length=255)

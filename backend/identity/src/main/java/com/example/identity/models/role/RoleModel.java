@@ -1,8 +1,15 @@
 package com.example.identity.models.role;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
+import com.example.identity.models.permission.PermissionModel;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.ManyToMany;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
@@ -35,7 +42,7 @@ public class RoleModel {
     @Column(name = "role_name", nullable=false, length=150)
     private String roleName;
 
-    @Column(name = "role_description", nullable=false, length=300)
+    @Column(name = "role_description", length=300)
     private String roleDescription;
 
     @Column(name = "role_is_active", nullable=false)
@@ -46,4 +53,11 @@ public class RoleModel {
 
     @Column(name = "role_updated_at")
     private LocalDateTime roleUpdatedAt;
+
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(name = "role_permission",
+            joinColumns = @JoinColumn(name = "role_id"),
+            inverseJoinColumns = @JoinColumn(name = "permission_id"))
+    @Builder.Default
+    private List<PermissionModel> permissions = new ArrayList<>();
 }

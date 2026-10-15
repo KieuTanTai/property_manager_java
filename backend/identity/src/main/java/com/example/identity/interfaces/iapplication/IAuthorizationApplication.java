@@ -12,10 +12,11 @@ import com.example.identity.presentation.response.RoleResponse;
 import com.example.identity.presentation.response.RoleWithPermissionsResponse;
 
 public interface IAuthorizationApplication {
-    RoleResponse getBaseRole();
+    RoleModel getBaseRole();
     RoleWithPermissionsResponse getRoleWithPermissions(ESystemRoleCode code);
+    RoleWithPermissionsResponse getRoleWithPermissions(String code);
     RoleResponse getRoleByCode(String code);
-    List<RoleResponse> getRoles();
+    List<RoleWithPermissionsResponse> getRoles();
     PermissionResponse getPermissionByCode(ESystemPermissionCode code);
     PermissionResponse getPermissionByCode(String code);
     List<PermissionResponse> getPermissions();
@@ -28,6 +29,4 @@ public interface IAuthorizationApplication {
     int addAccountPermissions(UUID accountId, List<UUID> permissionIds);
     int updatePermission(PermissionModel permission);
     int updateAccountPermissions(UUID accountId, List<UUID> permissionIds);
-    RoleResponse saveRole(RoleModel role);
-    PermissionResponse savePermission(PermissionModel permission);
 }

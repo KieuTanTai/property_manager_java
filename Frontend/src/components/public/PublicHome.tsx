@@ -1,11 +1,10 @@
 import {useEffect, useMemo, useState} from "react"
+import {APP_SETTINGS} from "@/config/appSettings"
 import {LOCATIONS, PREMISES, PREMISE_MEDIA} from "@/mocks/shared.ts"
 import {MOCK_CONTACTS} from "@/mocks/contacts.ts"
 import type {PublicHomeProps as Props} from "./types"
 import {Modal, PremiseStatusBadge, premiseStatusSurface} from "../modules/shared"
 import type {Premise} from "../premises/types"
-
-const PREMISES_PER_PAGE = 6
 
 const PREMISE_STATUS_TABS = [
     {key: "all", label: "Tất cả"},
@@ -69,11 +68,11 @@ export function PublicHome({onLogin, onManager}: Props) {
     const visiblePremises = statusTab === "all"
         ? searchedPremises
         : searchedPremises.filter((premise) => premise.status === statusTab)
-    const pageCount = Math.max(1, Math.ceil(visiblePremises.length / PREMISES_PER_PAGE))
+    const pageCount = Math.max(1, Math.ceil(visiblePremises.length / APP_SETTINGS.pagination.defaultPageSize))
     const currentPage = Math.min(page, pageCount)
     const pagedPremises = visiblePremises.slice(
-        (currentPage - 1) * PREMISES_PER_PAGE,
-        currentPage * PREMISES_PER_PAGE,
+        (currentPage - 1) * APP_SETTINGS.pagination.defaultPageSize,
+        currentPage * APP_SETTINGS.pagination.defaultPageSize,
     )
 
     const openPremise = (premise: Premise) => {

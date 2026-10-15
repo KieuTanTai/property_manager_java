@@ -2,6 +2,7 @@ package com.example.identity.presentation.controller;
 
 import java.util.UUID;
 
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -33,15 +34,12 @@ public class UserProfileController {
     }
 
     @PostMapping("/create")
-    public ProfileResponse create(@RequestBody ProfileRequests.Create request) {
-        if (request.identityCode() == null || request.identityCode().length() != 12) {
-            throw new IllegalArgumentException("Identity code must be 12 characters.");
-        }
+    public ProfileResponse create(@Valid @RequestBody ProfileRequests.Create request) {
         return profiles.create(request.identityCode(), request.accountId());
     }
 
-    @PostMapping("/update")
-    public ProfileResponse update(@RequestBody ProfileRequests.Update request) {
+    @RequestMapping(value = "/update", method = { RequestMethod.POST, RequestMethod.PUT })
+    public ProfileResponse update(@Valid @RequestBody ProfileRequests.Update request) {
         return profiles.update(UserProfileModel.builder()
                 .userProfileId(request.identityCode()).userProfileAccountId(request.accountId())
                 .userProfileFirstName(request.firstName()).userProfileLastName(request.lastName())

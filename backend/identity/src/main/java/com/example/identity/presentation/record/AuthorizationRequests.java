@@ -3,27 +3,33 @@ package com.example.identity.presentation.record;
 import java.util.List;
 import java.util.UUID;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 public final class AuthorizationRequests {
     private AuthorizationRequests() {
     }
 
-    public record IdListRequest(List<UUID> ids) {
+    public record IdListRequest(@NotEmpty List<@NotNull UUID> ids) {
     }
 
     public record RoleChangeRequest(
-            @NotBlank String code,
-            @NotBlank String name,
+            @Size(max = 50) String code,
+            @NotBlank @Size(max = 150) String name,
+            @Size(max = 300)
             String description,
-            boolean active,
-            List<UUID> permissionIds) {
+            @JsonAlias("isActive") boolean active,
+            @NotEmpty List<@NotNull UUID> permissionIds) {
     }
 
     public record PermissionChangeRequest(
-            @NotBlank String code,
-            @NotBlank String name,
+            @Size(max = 50) String code,
+            @NotBlank @Size(max = 150) String name,
+            @Size(max = 300)
             String description,
-            boolean active) {
+            @JsonAlias("isActive") boolean active) {
     }
 }

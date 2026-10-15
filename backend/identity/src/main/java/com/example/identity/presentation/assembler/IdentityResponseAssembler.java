@@ -1,50 +1,47 @@
 package com.example.identity.presentation.assembler;
 
-import java.util.List;
-import java.util.Optional;
-
-import com.example.identity.models.permission.PermissionModel;
-import com.example.identity.models.role.RoleModel;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
-import com.example.identity.interfaces.irepository.AccountAdditionalPermissionRepository;
-import com.example.identity.interfaces.irepository.AccountRoleRepository;
-import com.example.identity.interfaces.irepository.PermissionRepository;
-import com.example.identity.interfaces.irepository.RoleRepository;
+import jakarta.persistence.Persistence;
+import com.example.identity.interfaces.irepository.AccountRepository;
 import com.example.identity.models.account.AccountModel;
 import com.example.identity.presentation.mapper.IdentityResponseMapper;
 import com.example.identity.presentation.response.AccountResponse;
+import com.example.identity.presentation.response.ProfileResponse;
 
 @Component
 public class IdentityResponseAssembler {
-    private final AccountRoleRepository accountRoles;
-    private final AccountAdditionalPermissionRepository accountPermissions;
-    private final RoleRepository roles;
-    private final PermissionRepository permissions;
+    private final AccountRepository accounts;
     private final IdentityResponseMapper mapper;
 
-    public IdentityResponseAssembler(AccountRoleRepository accountRoles,
-            AccountAdditionalPermissionRepository accountPermissions,
-            RoleRepository roles, PermissionRepository permissions,
-            IdentityResponseMapper mapper) {
-        this.accountRoles = accountRoles;
-        this.accountPermissions = accountPermissions;
-        this.roles = roles;
-        this.permissions = permissions;
+    public IdentityResponseAssembler(AccountRepository accounts, IdentityResponseMapper mapper) {
+        this.accounts = accounts;
         this.mapper = mapper;
     }
 
+    @Transactional(readOnly = true)
     public AccountResponse account(AccountModel account) {
-        List<String> roleCodes = accountRoles.findByFirstId(account.getAccountId()).stream()
-                .map(association -> roles.findById(association.getId().getRoleId()))
-                .flatMap(Optional::stream)
-                .map(RoleModel::getRoleCode)
-                .toList();
-        List<String> permissionCodes = accountPermissions.findByFirstId(account.getAccountId()).stream()
-                .map(association -> permissions.findById(association.getId().getPermissionId()))
-                .flatMap(Optional::stream)
-                .map(PermissionModel::getPermissionCode)
-                .toList();
-        return mapper.account(account, roleCodes, permissionCodes);
+        return mapper.account(hasLoadedAccountPermissions(account) ? account : loadAccount(account));
+    }
+
+    @Transactional(readOnly = true)
+    public ProfileResponse profile(AccountModel account) {
+        AccountModel loaded = Persistence.getPersistenceUtil().isLoaded(account, "userProfile")
+                ? account
+                : accounts.findByEmailWithNavigations(account.getAccountEmail(), false, false, true)
+                        .orElse(account);
+        return mapper.profile(loaded.getUserProfile());
+    }
+
+    private boolean hasLoadedAccountPermissions(AccountModel account) {
+        var persistence = Persistence.getPersistenceUtil();
+        return persistence.isLoaded(account, "roles")
+                && persistence.isLoaded(account, "additionalPermissions");
+    }
+
+    private AccountModel loadAccount(AccountModel account) {
+        return accounts.findByEmailWithNavigations(account.getAccountEmail(), true, true, false)
+                .orElse(account);
     }
 }
