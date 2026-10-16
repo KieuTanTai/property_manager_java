@@ -49,10 +49,10 @@ public class RoleModel {
     private Boolean roleIsActive;
 
     @Column(name = "role_created_at")
-    private LocalDateTime roleCreatedAt;
+    private LocalDateTime roleCreatedAt = LocalDateTime.now();
 
     @Column(name = "role_updated_at")
-    private LocalDateTime roleUpdatedAt;
+    private LocalDateTime roleUpdatedAt = LocalDateTime.now();
 
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(name = "role_permission",

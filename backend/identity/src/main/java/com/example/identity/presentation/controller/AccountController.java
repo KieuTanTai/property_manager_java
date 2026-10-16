@@ -7,12 +7,14 @@ import java.util.List;
 import jakarta.validation.Valid;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
 import com.example.identity.interfaces.iapplication.IAccountApplication;
 import com.example.identity.models.account.AccountModel;
 import com.example.identity.presentation.assembler.IdentityResponseAssembler;
 import com.example.identity.presentation.record.AuthRequest;
+import com.example.identity.presentation.record.GoogleLoginRequest;
 import com.example.identity.presentation.record.PasswordChangeRequest;
 import com.example.identity.presentation.response.AccountResponse;
 import com.example.identity.presentation.response.LoginResponse;
@@ -20,6 +22,7 @@ import com.example.identity.presentation.record.AccountRequests;
 import com.example.identity.presentation.response.ClaimResponse;
 import com.example.shared.persistence.record.RecordBaseCursorPage;
 
+@ControllerAdvice
 @RestController
 @RequestMapping("/api/account")
 public class AccountController {
@@ -40,12 +43,19 @@ public class AccountController {
 
     @PostMapping("/register")
     public AccountResponse register(@Valid @RequestBody AuthRequest request) {
-        return assembler.account(service.register(request.email(), request.password()));
+        return assembler.account(service.register(request.email(), request.password(), request.credential()));
     }
 
     @PostMapping("/login")
     public LoginResponse login(@Valid @RequestBody AuthRequest request) {
         AccountModel account = service.login(request.email(), request.password());
+        AccountResponse accountResponse = assembler.account(account);
+        return new LoginResponse(accountResponse, assembler.profile(account), claims(accountResponse));
+    }
+
+    @PostMapping("/google-login")
+    public LoginResponse googleLogin(@Valid @RequestBody GoogleLoginRequest request) {
+        AccountModel account = service.loginWithGoogle(request.email(), request.credential());
         AccountResponse accountResponse = assembler.account(account);
         return new LoginResponse(accountResponse, assembler.profile(account), claims(accountResponse));
     }

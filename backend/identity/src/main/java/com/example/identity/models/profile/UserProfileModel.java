@@ -67,8 +67,8 @@ public class UserProfileModel {
     private String userProfileAvatarUrl;
 
     @Column(name = "user_profile_created_at")
-    private LocalDateTime userProfileCreatedAt;
+    private LocalDateTime userProfileCreatedAt = LocalDateTime.now();
 
     @Column(name = "user_profile_updated_at")
-    private LocalDateTime userProfileUpdatedAt;
+    private LocalDateTime userProfileUpdatedAt = LocalDateTime.now();
 }

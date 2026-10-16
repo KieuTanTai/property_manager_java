@@ -42,8 +42,8 @@ public class PermissionModel {
     private Boolean permissionIsActive;
 
     @Column(name = "permission_created_at")
-    private LocalDateTime permissionCreatedAt;
+    private LocalDateTime permissionCreatedAt = LocalDateTime.now();
 
     @Column(name = "permission_updated_at")
-    private LocalDateTime permissionUpdatedAt;
+    private LocalDateTime permissionUpdatedAt = LocalDateTime.now();
 }

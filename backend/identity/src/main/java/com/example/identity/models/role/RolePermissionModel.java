@@ -28,7 +28,7 @@ public class RolePermissionModel implements Serializable{
     private RolePermissionModelId id;
 
     @Column(name = "assigned_at")
-    private LocalDateTime assignedAt;
+    private LocalDateTime assignedAt = LocalDateTime.now();
 
     @Embeddable 
     @Getter 

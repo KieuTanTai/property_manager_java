@@ -28,7 +28,7 @@ public class AccountAdditionalPermissionModel implements Serializable{
     private AccountAdditionalPermissionModelId id;
 
     @Column(name = "assigned_at")
-    private LocalDateTime assignedAt;
+    private LocalDateTime assignedAt = LocalDateTime.now();
 
     @Embeddable 
     @Getter 

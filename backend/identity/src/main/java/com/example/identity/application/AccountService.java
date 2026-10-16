@@ -15,6 +15,8 @@ import org.springframework.transaction.annotation.Transactional;
 import com.example.identity.interfaces.IAccountHelper;
 import com.example.identity.interfaces.iapplication.IAccountApplication;
 import com.example.identity.interfaces.iapplication.IAuthorizationApplication;
+import com.example.identity.infrastructure.security.GoogleIdentityTokenVerifier;
+import com.example.identity.infrastructure.security.GoogleIdentityTokenVerifier.VerifiedGoogleIdentity;
 import com.example.identity.models.account.AccountAdditionalPermissionModel;
 import com.example.identity.models.account.AccountModel;
 import com.example.identity.models.account.AccountRoleModel;
@@ -30,50 +32,114 @@ public class AccountService implements IAccountApplication {
     private final AccountAdditionalPermissionRepository accountPermissions;
     private final UserProfileRepository userProfiles;
     private final IAuthorizationApplication authorization;
+    private final GoogleIdentityTokenVerifier googleIdentityTokenVerifier;
 
     public AccountService(AccountRepository accounts, IAccountHelper helper,
             AccountRoleRepository accountRoles,
             AccountAdditionalPermissionRepository accountPermissions,
             UserProfileRepository profiles,
-            IAuthorizationApplication authorization) {
+            IAuthorizationApplication authorization,
+            GoogleIdentityTokenVerifier googleIdentityTokenVerifier) {
         this.accounts = accounts;
         this.helper = helper;
         this.accountRoles = accountRoles;
         this.accountPermissions = accountPermissions;
         this.userProfiles = profiles;
         this.authorization = authorization;
+        this.googleIdentityTokenVerifier = googleIdentityTokenVerifier;
     }
 
     @Transactional
     public AccountModel register(String email, String password) {
-        validateCredentials(email, password);
-        String normalizedEmail = email.trim().toLowerCase(java.util.Locale.ROOT);
-        if (accounts.findByEmail(normalizedEmail).isPresent()) {
-            throw new IllegalArgumentException("Account email is existed.");
+        return register(email, password, null);
+    }
+
+    @Transactional
+    public AccountModel register(String email, String password, String credential) {
+        String normalizedEmail = normalizeEmail(email);
+        boolean hasPassword = password != null && !password.isBlank();
+        boolean credentialSupplied = credential != null;
+
+        if (hasPassword) {
+            if (credentialSupplied) {
+                throw new IllegalArgumentException("Password registration must not include a Google credential.");
+            }
+            if (!helper.isPasswordValid(password)) {
+                throw new IllegalArgumentException("Account password is invalid.");
+            }
+            return createAccount(normalizedEmail, helper.hashPassword(password), null);
         }
-        var baseRole = authorization.getBaseRole();
-        AccountModel account = accounts.save(AccountModel.builder()
-                .accountId(UuidV7.generate())
-                .accountEmail(normalizedEmail)
-                .accountPassword(helper.hashPassword(password))
-                .accountIsActive(true)
-                .roles(new ArrayList<>(List.of(baseRole)))
-                .build());
-        return account;
+
+        if (!credentialSupplied || credential.isBlank()) {
+            throw new IllegalArgumentException("A Google credential is required when the password is blank.");
+        }
+        VerifiedGoogleIdentity identity = googleIdentityTokenVerifier.verify(credential, normalizedEmail);
+        return createGoogleAccount(identity);
     }
 
     @Transactional(readOnly = true)
     public AccountModel login(String email, String password) {
         validateCredentials(email, password);
-        AccountModel account = accounts.findByEmailWithNavigations(email.trim(), true, true, true)
+        AccountModel account = accounts.findByEmailWithNavigations(normalizeEmail(email), true, true, true)
                 .orElseThrow(() -> new IllegalArgumentException("Account not found."));
         if (!Boolean.TRUE.equals(account.getAccountIsActive())) {
             throw new IllegalStateException("Account is not active.");
+        }
+        if (account.getAccountOauthCredentialToken() != null
+                && !account.getAccountOauthCredentialToken().isBlank()) {
+            throw new IllegalArgumentException("This account uses Google login.");
         }
         if (!helper.verifyPassword(password, account.getAccountPassword())) {
             throw new IllegalArgumentException("Account password is invalid.");
         }
         return account;
+    }
+
+    @Transactional
+    public AccountModel loginWithGoogle(String email, String credential) {
+        String normalizedEmail = normalizeEmail(email);
+        VerifiedGoogleIdentity identity = googleIdentityTokenVerifier.verify(credential, normalizedEmail);
+        AccountModel account = accounts.findByEmailWithNavigations(normalizedEmail, true, true, true)
+                .orElseGet(() -> createGoogleAccount(identity));
+
+        String storedCredential = account.getAccountOauthCredentialToken();
+        if ((account.getAccountPassword() != null && !account.getAccountPassword().isBlank())
+                || storedCredential == null || storedCredential.isBlank()) {
+            throw new IllegalArgumentException("This account is registered with a password, not Google.");
+        }
+        if (!storedCredential.equals(identity.subject())) {
+            throw new IllegalArgumentException("Google credential does not match this account.");
+        }
+        if (!Boolean.TRUE.equals(account.getAccountIsActive())) {
+            throw new IllegalStateException("Account is not active.");
+        }
+        return account;
+    }
+
+    private AccountModel createGoogleAccount(VerifiedGoogleIdentity identity) {
+        return createAccount(identity.email(), "", identity.subject());
+    }
+
+    private AccountModel createAccount(String email, String password, String googleSubject) {
+        if (accounts.findByEmail(email).isPresent()) {
+            throw new IllegalArgumentException("Account email is existed.");
+        }
+        var baseRole = authorization.getBaseRole();
+        return accounts.save(AccountModel.builder()
+                .accountId(UuidV7.generate())
+                .accountEmail(email)
+                .accountPassword(password)
+                .accountOauthCredentialToken(googleSubject)
+                .accountIsActive(true)
+                .roles(new ArrayList<>(List.of(baseRole)))
+                .build());
+    }
+
+    private String normalizeEmail(String email) {
+        if (!helper.isEmailValid(email == null ? null : email.trim())) {
+            throw new IllegalArgumentException("Account email is invalid.");
+        }
+        return email.trim().toLowerCase(java.util.Locale.ROOT);
     }
 
     public boolean logout(String email) {
@@ -238,8 +304,15 @@ public class AccountService implements IAccountApplication {
             throw new IllegalArgumentException("Account email is invalid.");
         }
         String password = account.getAccountPassword();
-        if (password == null || password.isBlank() || password.length() > 255) {
-            throw new IllegalArgumentException("Account password is required and must not exceed 255 characters.");
+        String googleCredential = account.getAccountOauthCredentialToken();
+        boolean hasPassword = password != null && !password.isBlank();
+        boolean hasGoogleCredential = googleCredential != null && !googleCredential.isBlank();
+        if (hasPassword == hasGoogleCredential) {
+            throw new IllegalArgumentException(
+                    "Account must have either a password or a Google credential, but not both.");
+        }
+        if (hasPassword && password.length() > 255) {
+            throw new IllegalArgumentException("Account password must not exceed 255 characters.");
         }
     }
 

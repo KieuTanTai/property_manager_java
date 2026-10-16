@@ -12,7 +12,9 @@ import com.example.shared.persistence.record.RecordBaseCursorPage;
 
 public interface IAccountApplication {
     AccountModel register(String email, String password);
+    AccountModel register(String email, String password, String credential);
     AccountModel login(String email, String password);
+    AccountModel loginWithGoogle(String email, String credential);
     boolean logout(String email);
     AccountModel findByEmail(String email);
     AccountModel findById(UUID accountId);

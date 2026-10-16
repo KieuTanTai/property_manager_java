@@ -31,7 +31,7 @@ public final class HashExistingAccountPasswords {
         var encoder = new BCryptPasswordEncoder();
         var accounts = new ArrayList<LegacyAccount>();
         int alreadyHashed = 0;
-        int nullPasswords = 0;
+        int missingPasswords = 0;
 
         try (Connection connection = DriverManager.getConnection(url, username, password)) {
             connection.setAutoCommit(false);
@@ -41,8 +41,8 @@ public final class HashExistingAccountPasswords {
                         ResultSet rows = select.executeQuery()) {
                     while (rows.next()) {
                         String storedPassword = rows.getString("account_password");
-                        if (storedPassword == null) {
-                            nullPasswords++;
+                        if (storedPassword == null || storedPassword.isBlank()) {
+                            missingPasswords++;
                         } else if (BCRYPT_HASH.matcher(storedPassword).matches()) {
                             alreadyHashed++;
                         } else {
@@ -69,8 +69,8 @@ public final class HashExistingAccountPasswords {
                 }
                 connection.commit();
                 System.out.printf(
-                        "Đã hash %d tài khoản trong schema %s; bỏ qua %d mật khẩu BCrypt, %d mật khẩu NULL, %d dòng đã đổi trong lúc chạy.%n",
-                        updated, SCHEMA, alreadyHashed, nullPasswords, changedDuringRun);
+                        "Đã hash %d tài khoản trong schema %s; bỏ qua %d mật khẩu BCrypt, %d tài khoản không có mật khẩu, %d dòng đã đổi trong lúc chạy.%n",
+                        updated, SCHEMA, alreadyHashed, missingPasswords, changedDuringRun);
             } catch (SQLException | RuntimeException exception) {
                 connection.rollback();
                 throw exception;

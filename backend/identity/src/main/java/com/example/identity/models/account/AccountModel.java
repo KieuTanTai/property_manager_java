@@ -42,11 +42,15 @@ public class AccountModel {
     @Column(name = "account_password", nullable = false, length = 255)
     private String accountPassword;
 
+    /** Stores the stable Google subject from a verified ID token, not the short-lived JWT itself. */
+    @Column(name = "account_oauth_credential_token", columnDefinition = "TEXT")
+    private String accountOauthCredentialToken;
+
     @Column(name = "account_created_at")
-    private LocalDateTime accountCreatedAt;
+    private LocalDateTime accountCreatedAt = LocalDateTime.now();
 
     @Column(name = "account_updated_at")
-    private LocalDateTime accountUpdatedAt;
+    private LocalDateTime accountUpdatedAt = LocalDateTime.now();
 
     @Column(name = "account_is_active", nullable = false)
     private Boolean accountIsActive;
