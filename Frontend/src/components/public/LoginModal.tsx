@@ -1,12 +1,75 @@
-import { useState } from "react"
-import { identityApi } from "../../api/identity"
+import { useCallback, useEffect, useRef, useState } from "react"
+import { identityApi } from "@/api/identity.ts"
 import type { LoginModalProps as Props } from "./types"
 
 export function LoginModal({ onClose, onLogin }: Props) {
+  const googleButtonRef = useRef<HTMLDivElement>(null)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID?.trim()
+
+  const handleGoogleLogin = useCallback(async (credential: string) => {
+    setError(null)
+    setIsSubmitting(true)
+    try {
+      const email = readGoogleEmail(credential)
+      if (!email) throw new Error("Google không trả về địa chỉ email. Vui lòng thử lại.")
+      const result = await identityApi.loginWithGoogle(email, credential)
+      const roleCodes = result.account.roleCodes ?? []
+      onLogin({ accountId: result.account.accountId, email: result.account.email, roleCodes })
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Không thể đăng nhập bằng Google. Vui lòng thử lại.")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }, [onLogin])
+
+  useEffect(() => {
+    if (!googleClientId || !googleButtonRef.current) return
+
+    let isActive = true
+    const renderButton = () => {
+      const buttonContainer = googleButtonRef.current
+      if (!isActive || !window.google || !buttonContainer) return
+      window.google.accounts.id.initialize({
+        client_id: googleClientId,
+        callback: (response) => {
+          void handleGoogleLogin(response.credential)
+        },
+      })
+      buttonContainer.replaceChildren()
+      window.google.accounts.id.renderButton(buttonContainer, {
+        theme: "outline",
+        size: "large",
+        shape: "pill",
+        text: "continue_with",
+        width: Math.floor(buttonContainer.getBoundingClientRect().width),
+      })
+    }
+
+    const scriptId = "google-identity-services"
+    let script = document.getElementById(scriptId) as HTMLScriptElement | null
+    if (!script) {
+      script = document.createElement("script")
+      script.id = scriptId
+      script.src = "https://accounts.google.com/gsi/client"
+      script.async = true
+      script.defer = true
+      script.onload = renderButton
+      document.head.appendChild(script)
+    } else if (window.google) {
+      renderButton()
+    } else {
+      script.addEventListener("load", renderButton)
+    }
+
+    return () => {
+      isActive = false
+      script?.removeEventListener("load", renderButton)
+    }
+  }, [googleClientId, handleGoogleLogin])
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -52,6 +115,21 @@ export function LoginModal({ onClose, onLogin }: Props) {
           <p className="mt-2 text-sm leading-6 text-slate-500">Đăng nhập bằng tài khoản đã được cấp để vào không gian làm việc.</p>
         </div>
 
+        {googleClientId ? (
+          <>
+            <div ref={googleButtonRef} className="mb-4 flex min-h-10 justify-center" />
+            <div className="mb-4 flex items-center gap-3 text-xs text-slate-400">
+              <span className="h-px flex-1 bg-slate-200" />
+              hoặc đăng nhập bằng email
+              <span className="h-px flex-1 bg-slate-200" />
+            </div>
+          </>
+        ) : (
+          <p className="mb-4 rounded-xl bg-amber-50 px-4 py-3 text-xs leading-5 text-amber-800">
+            Đăng nhập Google chưa được cấu hình. Hãy thiết lập VITE_GOOGLE_CLIENT_ID.
+          </p>
+        )}
+
         <form onSubmit={(event) => void handleSubmit(event)} className="space-y-4">
           <label className="block">
             <span className="mb-1.5 block text-sm font-medium text-slate-700">Email</span>
@@ -91,4 +169,16 @@ export function LoginModal({ onClose, onLogin }: Props) {
       </section>
     </div>
   )
+}
+
+function readGoogleEmail(credential: string): string | null {
+  try {
+    const payload = credential.split(".")[1]
+    if (!payload) return null
+    const normalized = payload.replace(/-/g, "+").replace(/_/g, "/")
+    const decoded = JSON.parse(atob(normalized)) as { email?: unknown }
+    return typeof decoded.email === "string" ? decoded.email.trim() : null
+  } catch {
+    return null
+  }
 }

@@ -269,6 +269,17 @@ export const identityApi = {
       claims: result.claims ?? [],
     }
   },
+  async loginWithGoogle(email: string, credential: string): Promise<RecordLoginResponse> {
+    const result = await request<BackendLoginResponse>("/account/google-login", {
+      method: "POST",
+      body: JSON.stringify({ email, credential }),
+    })
+    return {
+      account: toAuthResponse(result.account),
+      profile: toProfileModel(result.profile),
+      claims: result.claims ?? [],
+    }
+  },
   async register(email: string, password: string): Promise<RecordAuthResponse> {
     const account = await request<BackendAccountResponse>("/account/register", {
       method: "POST",

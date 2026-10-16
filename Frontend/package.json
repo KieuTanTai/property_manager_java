@@ -4,10 +4,10 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "predev": "node scripts/create-dev-certificate.mjs",
+    "prev": "node mjs/create-dev-certificate.mjs",
     "dev": "vite",
     "build": "vite build",
-    "prepreview": "node scripts/create-dev-certificate.mjs",
+    "prepreview": "node mjs/create-dev-certificate.mjs",
     "preview": "vite preview",
     "format": "oxfmt"
   },
